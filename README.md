@@ -84,27 +84,27 @@ A pointer to a *DATA_BLOB* structure that contains a password or other additiona
 
 If the user or application provides additional entropy to encrypt the data, it must be used during the decryption phase without exception.
 
-### DPAPI For Impact Pt.2 - Connecting the pieces:
+### DPAPI For Impact Pt.3 - Connecting the pieces:
 
 Next, we have a .NET developed proof of concept of the malicious artifact (DPAPI For Impact - Ransomware). 
 
 Essentially, the artifact will establish a connection via a **secure channel (HTTPS)** to a **command and control server** to download the additional entropy **(pOptionalEntropy)** into artifact's memory, which, as we explained, will be the value that minimizes the chances of the victim recovering their information.
 Also, it is important to note that the malicious artifact takes the files and encrypts them in chunks without damaging the **MAC (Message Authentication Code)**, this will prevent to corrupt the data being encrypted.
 
-Note: This malicious artifact was tested multiple times on a **Windows 11 machine** and successfully managed to evade *Windows Defender*.
+**Note:** This malicious artifact was tested multiple times on a **Windows 11 machine** and successfully managed to evade *Windows Defender*.
 
 
-* Files before encryption:
+* **Files before encryption:**
 
 ![image](https://github.com/CarlosG13/Data-Protection-API-DPAPI-For-Impact---Ransomware/assets/69405457/f98176d0-c4e0-44db-80a9-f49cc3819f07)
 
 ![image](https://github.com/CarlosG13/Data-Protection-API-DPAPI-For-Impact---Ransomware/assets/69405457/fff0655b-f970-4fc4-9d42-c1c9f85ae43f)
 
-* Running the artifact:
+* **Running the artifact:**
 
 ![image](https://github.com/CarlosG13/Data-Protection-API-DPAPI-For-Impact---Ransomware/assets/69405457/7fe9486f-bef0-418e-b1a4-f2dea6f47c5d)
 
-* Files after encryption:
+* **Files after encryption:**
 
 ![image](https://github.com/CarlosG13/Data-Protection-API-DPAPI-For-Impact---Ransomware/assets/69405457/406a5e29-af9c-4824-84c5-e030766e2502)
 
