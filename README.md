@@ -5,8 +5,12 @@ Abusing Data Protection API (DPAPI) as a technique to encrypt the File System - 
 
 Throughout history, we have witnessed an incredible number of Windows functionalities being abused for malicious purposes, such as **BitLocker** being used in the development of Ransomware. This is one of the reasons why the author of this research has devoted time to understanding what other functionalities can be abused at the **impact tactic level**, which, in this case, will be **Data Protection API (DPAPI)**.
 
+##### [LockBit ransomware — What You Need to Know](https://www.kaspersky.com/resource-center/threats/lockbit-ransomware)
+
 DPAPI has been the subject of multiple abuses aimed at extracting and accessing user and application secrets, as evidenced by techniques such as **Credentials from Password Stores (T1555)** and **Credentials from Password Stores: Credentials from Web Browsers (T1555.003)**. While it may appear that an API like DPAPI is less likely to be abused when it comes to the *Impact tactic*, we will see that a malicious actor can develop a *malicious artifact* that abuses this function to encrypt a file system.
 
+##### [Credentials from Password Stores ](https://attack.mitre.org/techniques/T1555/)
+##### [Credentials from Password Stores: Credentials from Web Browsers](https://attack.mitre.org/techniques/T1555/003/)
 
 All the research that will be shown below is, to a large extent, grounded in the principles of the **Pyramid of Pain**:
 
@@ -65,7 +69,6 @@ The *dwFlags* parameter is of paramount importance as it allows us to enable ver
 - **CRYPTPROTECT_UI_FORBIDDEN:**  This flag is used for remote situations where presenting a user interface (UI) is not an option. When this flag is set and a UI is specified for either the protect or unprotect operation, the operation fails and GetLastError returns the *ERROR_PASSWORD_RESTRICTION* code. 
 - **CRYPTPROTECT_AUDIT:**  This flag generates an audit on protect and unprotect operations. Audit log entries are recorded only if szDataDescr is not NULL and not empty. 
 
-
 The most interesting flag is *CRYPTPROTECT_AUDIT* as it generates an audit on **protect** and **unprotect** operations:
 
 - **Event ID 4694:** *Protection* of auditable protected data was attempted.
@@ -75,12 +78,14 @@ It is of utmost importance to highlight that, according to Microsoft's official 
 
 From the adversary's perspective, if these *Win32 APIs* were to be abused, they will obviously not activate that flag to "minimize" the chances of their operations being detected.
 
-### DPAPI For Impact Pt.2 - Optional Entropy:
+##### [DPAPI Events Documentation](https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/audit-dpapi-activity)
 
-As previously explained, DPAPI typically uses the user's logon credentials for encryption and decryption operation. However, the latter can change if the *CRYPTPROTECT_LOCAL_MACHINE* flag is specified, as it grants all local machine users the authority to decrypt (unprotect) the data. Consequently, if someone encrypts data with DPAPI (as in the case of ransomware), the victim is likely to recover their data without major issues, **unless additional entropy is specified (pOptionalEntropy)**.
+### DPAPI For Impact Pt.2 - Optional Entropy (pOptionalEntropy):
+
+As previously explained, DPAPI typically uses the user's logon credentials for encryption and decryption operation. However, the latter can change if the *CRYPTPROTECT_LOCAL_MACHINE* flag is specified, as it grants all local machine users the authority to decrypt (unprotect) the data. Consequently, if someone encrypts data with DPAPI (as in the case of ransomware), the victim is likely to recover their data without major issues, **unless additional entropy is specified (pOptionalEntropy)**. 
 
 * **pOptionalEntropy**: 
-A pointer to a *DATA_BLOB* structure that contains a password or other additional entropy used to encrypt the data. The *DATA_BLOB* structure used in the encryption phase must also be used in the decryption phase.
+A pointer to a *DATA_BLOB* structure that contains a password or other additional entropy used to encrypt the data. The *DATA_BLOB* structure used in the encryption phase must also be used in the decryption phase. Please note that this value is never saved or written to the hard disk at any point.
 
 If the user or application provides additional entropy to encrypt the data, it must be used during the decryption phase without exception.
 
@@ -91,8 +96,9 @@ Next, we have a .NET developed proof of concept of the malicious artifact (DPAPI
 Essentially, the artifact will establish a connection via a **secure channel (HTTPS)** to a **command and control server** to download the additional entropy **(pOptionalEntropy)** into artifact's memory, which, as we explained, will be the value that minimizes the chances of the victim recovering their information.
 Also, it is important to note that the malicious artifact takes the files and encrypts them in chunks without damaging the **MAC (Message Authentication Code)**, this will prevent to corrupt the data being encrypted.
 
-**Note:** This malicious artifact was tested multiple times on a **Windows 11 machine** and successfully managed to evade *Windows Defender*.
+On the other hand, it is possible to enhance the sophistication of the malicious artifact by adding anti-forensic properties, for instance, deleting the key from memory immediately after it has been used for its purpose.
 
+**Note:** This malicious artifact was tested multiple times on a **Windows 11 machine** and successfully managed to evade *Windows Defender*.
 
 * **Files before encryption:**
 
@@ -110,9 +116,27 @@ Also, it is important to note that the malicious artifact takes the files and en
 
 The only way to recover the data is by providing the right Optional Entropy when calling **CryptUnprotectData**.
 
+### DPAPI For Impact Pt.4 - Encrypted Files Entropy:
+
+Entropy analysis involves the investigation of statistical fluctuations within malware executables, allowing analysts to promptly and effectively detect **encrypted** and **packet** samples. 
+
+A file exhibiting **high entropy** suggests that it is well-encrypted, well-compressed, or comprised of genuinely random data.
+
+As an illustrative example, we will take one of the encrypted PDFs.
+
+* **PDF Entropy before encryption:**
+
+![image](https://github.com/CarlosG13/Data-Protection-API-DPAPI-For-Impact---Ransomware/assets/69405457/fd45fbfd-a534-4f67-8304-40022b9048cd)
+
+* **PDF Entropy after encryption:**
+
+In the following graph, we observe the encrypted PDF entropy **(0.980)**, approaching very close to the point of **maximum entropy (1.0)**, and this value remains nearly constant across the file offsets:
+
+![image](https://github.com/CarlosG13/Data-Protection-API-DPAPI-For-Impact---Ransomware/assets/69405457/5a0871aa-8bed-4c15-9dd6-e73b42af2201)
+
 ### Possible Solution:
 
-* **API Hooking:** Through this technique, it is possible to *intercept* the call to **CryptProtectData** and determine the **entropy** used to encrypt the files. 
+* **API Hooking:** Through this technique, it is possible to *intercept* the call to **CryptProtectData** and determine the **entropy (pOptionalEntropy)** used to encrypt the files. 
 **SpecterOps** has already developed a proof of concept that demonstrates this technique in action, known as **EntropyCapture**.
 
 #### [EntropyCapture: Simple Extraction of DPAPI Optional Entropy by Matt Merrill](https://posts.specterops.io/entropycapture-simple-extraction-of-dpapi-optional-entropy-6885196d54d0)
