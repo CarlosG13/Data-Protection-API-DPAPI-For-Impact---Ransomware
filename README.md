@@ -118,8 +118,6 @@ The only way to recover the data is by providing the right Optional Entropy when
 
 ### DPAPI For Impact Pt.4 - Encrypted Files Entropy:
 
-Entropy analysis involves the investigation of statistical fluctuations within malware executables, allowing analysts to promptly and effectively detect **encrypted** and **packet** samples. 
-
 A file exhibiting **high entropy** suggests that it is well-encrypted, well-compressed, or comprised of genuinely random data.
 
 As an illustrative example, we will take one of the encrypted PDFs.
